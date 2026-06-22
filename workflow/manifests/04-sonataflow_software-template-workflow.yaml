@@ -1,0 +1,169 @@
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  annotations:
+    sonataflow.org/description: |
+      A sample workflow to invoke software templates and check their progress
+    sonataflow.org/expressionLang: jq
+    sonataflow.org/profile: gitops
+    sonataflow.org/version: 0.0.1
+  creationTimestamp: null
+  labels:
+    app: software-template-workflow
+    sonataflow.org/workflow-app: software-template-workflow
+  name: software-template-workflow
+spec:
+  flow:
+    annotations:
+      - workflow-type/infrastructure
+    dataInputSchema:
+      failOnValidationErrors: true
+      schema: schemas/workflow-input-schema.json
+    functions:
+      - name: GetSoftwareTemplateTaskEvents
+        operation: specs/scaffolder-openapi.yaml#getTaskEvents
+        type: rest
+      - name: LaunchSoftwareTemplate
+        operation: specs/scaffolder-openapi.yaml#createTask
+        type: rest
+      - name: GetSoftwareTemplateTask
+        operation: specs/scaffolder-openapi.yaml#getTaskDetails
+        type: rest
+      - name: logInfo
+        operation: sysout:INFO
+        type: custom
+      - name: templateSuccessResult
+        operation: '{ "result": { "outputs":[ { "key":"Service Component in Catalog", "value": $SECRET.rhdh_url + "/catalog/default/component/" + .serviceName, "format":"link" } ] } }'
+        type: expression
+      - name: templateErrorResult
+        operation: '{ "result": { "message": "Failed to launch the software template \($SECRET.software_template_ref) to create the service \(.serviceName) for owner \(.owner).", "outputs":[ { "key":"Error", "value": ([.taskEvents[] | select(.body.error.message != null and .body.error.message != "") | .body.error.message] | join("\n")), "format":"text" } ] } }'
+        type: expression
+    start:
+      stateName: LaunchSoftwareTemplate
+    states:
+      - actionMode: sequential
+        actions:
+          - actionDataFilter:
+              toStateData: .launchedTemplate
+              useResults: true
+            functionRef:
+              arguments:
+                templateRef: $SECRET.software_template_ref
+                values:
+                  orgName: .orgName
+                  owner: .owner
+                  repoName: .repoName
+                  serviceName: .serviceName
+              invoke: sync
+              refName: LaunchSoftwareTemplate
+        name: LaunchSoftwareTemplate
+        transition:
+          nextState: GetSoftwareTemplate
+        type: operation
+      - actionMode: sequential
+        actions:
+          - actionDataFilter:
+              useResults: true
+            functionRef:
+              arguments:
+                message: '"Sleeping before checking the software template status"'
+              invoke: sync
+              refName: logInfo
+            sleep:
+              after: PT5S
+          - actionDataFilter:
+              toStateData: .readTask
+              useResults: true
+            functionRef:
+              arguments:
+                taskId: .launchedTemplate.id
+              invoke: sync
+              refName: GetSoftwareTemplateTask
+        name: GetSoftwareTemplate
+        transition:
+          nextState: IsTaskDone
+        type: operation
+      - dataConditions:
+          - condition: (.readTask.status == "processing")
+            transition:
+              nextState: GetSoftwareTemplate
+          - condition: (.readTask.status == "completed")
+            transition:
+              nextState: UpdateSoftwareTemplateTaskCompleted
+          - condition: (.readTask.status == "failed")
+            transition:
+              nextState: GetTaskEventsForFailedTask
+        defaultCondition:
+          transition:
+            nextState: GetSoftwareTemplate
+        name: IsTaskDone
+        type: switch
+      - actionMode: sequential
+        actions:
+          - actionDataFilter:
+              useResults: true
+            functionRef:
+              invoke: sync
+              refName: templateSuccessResult
+        end:
+          terminate: true
+        name: UpdateSoftwareTemplateTaskCompleted
+        type: operation
+      - actionMode: sequential
+        actions:
+          - actionDataFilter:
+              toStateData: .taskEvents
+              useResults: true
+            functionRef:
+              arguments:
+                events: true
+                taskId: .readTask.id
+              invoke: sync
+              refName: GetSoftwareTemplateTaskEvents
+        name: GetTaskEventsForFailedTask
+        transition:
+          nextState: UpdateSoftwareTemplateTaskFailed
+        type: operation
+      - actionMode: sequential
+        actions:
+          - actionDataFilter:
+              useResults: true
+            functionRef:
+              arguments:
+                message: '"Failed to laucnh software template. See software template event messages: " + ([.taskEvents[] | select(.body.error.message != null and .body.error.message != "") | .body.error.message] | join("\n"))'
+              invoke: sync
+              refName: logInfo
+        end:
+          terminate: true
+        metadata:
+          errorMessage: '"Failed to launch the software template \"" + $SECRET.software_template_ref + "\" to create the service \"" + .serviceName + "\" for owner \"" + .owner + "\".\n\n" + ( [.taskEvents[] | select(.body.error.message != null and .body.error.message != "") | .body.error.message ] | if length > 0 then "Error details:\n" + join("\n") else "" end )'
+        name: UpdateSoftwareTemplateTaskFailed
+        type: operation
+  podTemplate:
+    container:
+      image: quay.io/orchestrator/demo-software-template-hello-world
+      resources: {}
+      envFrom:
+        - secretRef:
+            name: software-template-workflow-secrets
+  resources:
+    configMaps:
+      - configMap:
+          name: 01-software-template-workflow-resources-schemas
+        workflowPath: schemas
+      - configMap:
+          name: 02-software-template-workflow-resources-specs
+        workflowPath: specs
+  persistence:
+    dbMigrationStrategy: service
+    postgresql:
+      secretRef:
+        name: backstage-psql-secret-developer-hub
+        passwordKey: POSTGRES_PASSWORD
+        userKey: POSTGRES_USER
+      serviceRef:
+        databaseName: backstage_plugin_orchestrator
+        databaseSchema: greeting
+        name: backstage-psql-developer-hub
+        port: 5432
+
