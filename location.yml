@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: orchestrator-demo-templates
+  description: Templates for Orchestrator demo
+spec:
+  type: url
+  targets:
+     - ./hello-world-software-template/template.yaml
+     - ./run-workflow-software-template/template.yaml    
