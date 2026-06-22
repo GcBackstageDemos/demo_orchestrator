@@ -2,13 +2,12 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: software-template-workflow
-  title: A workflow that invokes software templates from Backstage
+  title: Run Software Template Workflow
   description: A sample workflow to invoke software templates and check their progress
-
   tags:
     - orchestrator
 spec:
-  owner: red-hat-developer-hub-authors
+  owner: group:default/tssc
   system: red-hat-developer-hub
   type: service
 
@@ -21,11 +20,12 @@ spec:
         orgName:
           title: Organization Name
           type: string
-          description: GitHub Organization Name
+          description: Gitlab Organization Name
+          default: development
         repoName:
           title: Repository Name
           type: string
-          description: GitHub Repository Name
+          description: Gitlab Repository Name
         serviceName:
           title: Service Name
           type: string

@@ -8,8 +8,9 @@ metadata:
     - recommended
     - typescript
     - test
+    - orchestrator
 spec:
-  owner: user:default/guest
+  owner: group:default/tssc
   type: service
 
   parameters:
@@ -21,17 +22,17 @@ spec:
         - owner
       properties:
         orgName:
-          title: GitHub Organizatoin Name
+          title: Gitlab Organizatoin Name
           type: string
-          description: GitHub organizatoin name for the service
+          description: Gitlab organizatoin name for the service
           ui:autofocus: true
           ui:options:
             rows: 1
 
         repoName:
-          title: GitHub Repository Name
+          title: Gitlab Repository Name
           type: string
-          description: A new GitHub repository name for the service
+          description: A new Gitlab repository name for the service
           ui:options:
             rows: 1
 
@@ -71,7 +72,7 @@ spec:
       name: Publish
       action: publish:gitlab
       input:
-        repoUrl: 'gitlab-gitlab.${{ steps["fetch-provision-data"].output.entity.metadata.labels["ocp-apps-domain"] }}?owner=${{ parameters.owner }}&repo=${{parameters.repoName}}'
+        repoUrl: 'gitlab-gitlab.${{ steps["fetch-provision-data"].output.entity.metadata.labels["ocp-apps-domain"] }}?owner=${{ parameters.orgName }}&repo=${{ parameters.repoName }}'
         repoVisibility: public
 
 
