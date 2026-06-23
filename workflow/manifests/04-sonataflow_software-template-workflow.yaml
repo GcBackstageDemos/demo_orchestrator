@@ -7,7 +7,6 @@ metadata:
     sonataflow.org/expressionLang: jq
     sonataflow.org/profile: gitops
     sonataflow.org/version: 0.0.1
-  creationTimestamp: null
   labels:
     app: software-template-workflow
     sonataflow.org/workflow-app: software-template-workflow
