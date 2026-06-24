@@ -4,9 +4,8 @@ Example on how to integrate Orchestrator with Backstage Catalog
 
 ## How to configure 
 
-. Update tssc-developer-hub-app-config to enable external API calls:
-
-      
+. Update *tssc-developer-hub-app-config* to enable external API calls:
+     
       backend:
         auth:     
           externalAccess:
@@ -16,8 +15,8 @@ Example on how to integrate Orchestrator with Backstage Catalog
                   subject: external
       
 
-. Import this location.yml to Developer Hub using the console
+. Import this xref:./templates/location.yml [location.yml] to Developer Hub using the console
 
-. Update 00-secret_software-template-workflow-secrets.yaml with your environment specifics
+. Update xref:./workflow/manifests/00-secret_software-template-workflow-secrets.yaml[00-secret_software-template-workflow-secrets.yaml] with your Developer Hub URL
 
 . Apply the manifests in the manifest folder

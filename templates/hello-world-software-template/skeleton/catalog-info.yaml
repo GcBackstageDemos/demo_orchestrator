@@ -4,7 +4,7 @@ metadata:
   name: ${{values.serviceName}}
   description: A simple Hello World service
   annotations:
-    github.com/project-slug: ${{values.orgName}}/${{values.repoName}}
+    gitlab.com/project-slug: ${{values.orgName}}/${{values.repoName}}
   tags:
     - typescript
     - test
